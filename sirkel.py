@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 11 15:49:55 2016
-
-@author: magopda
-"""
-
 from math import pi
 from math import pow
 
