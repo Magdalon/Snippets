@@ -94,7 +94,7 @@ def leggTilSted(navn,breddegrad,lengdegrad,planet=jorden):
     Sted(navn,breddegrad,lengdegrad,planet)
     print(jorden.steder[navn],"er lagt til.")
     
-# Legger til steder. Dette kan automatiseres.
+# Legger til noen steder.
 leggTilSted("Bergen",(60,23,33,N),(5,19,24,Ø))
 leggTilSted("Oslo",(59,54,40,N),(10,44,00,Ø))
 leggTilSted("Bangkok",13,100)
