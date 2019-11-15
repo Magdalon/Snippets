@@ -28,7 +28,7 @@ class Person:
         return self.navn + ": " + str(self.meninger)
     
 def prompt(påstand):
-    svar = input(påstand+" (ja/nei)")
+    svar = input(påstand+"? (ja/nei)")
     positiv = ['Ja','ja','Y','y','J','j']
     negativ = ['Nei','nei','N','n']
     while not (svar in positiv or svar in negativ):

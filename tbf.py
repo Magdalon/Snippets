@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov  8 11:11:03 2019
+
+@author: magopda
+"""
+
+
 # laster inn funksjonen shuffle, som vi skal bruke til å stokke om ordene
 from random import shuffle
 
