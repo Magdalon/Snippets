@@ -36,8 +36,8 @@ def trekant(a,b,c):
     
     return A,B,C,areal
     
-a = int(input("Side a?"))
-b = int(input("Side b?"))
-c = int(input("Side c?"))
+a = float(input("Side a?"))
+b = float(input("Side b?"))
+c = float(input("Side c?"))
 
 trekant(a,b,c)

@@ -91,9 +91,10 @@ class Valgomat:
             self.sammenligning(deltaker)
         return deltaker
     
-testValgomat = Valgomat(["Send dem hjem", "Nok er nok", "Kloden har fått feber", "Alle skal få"])
-testValgomat.leggTilPolitiker("Nils", [True, True, False, False])
-testValgomat.leggTilPolitiker("Kåre", [False, True, False, False])
-testValgomat.leggTilPolitiker("Tore", [False, False, True, True])
-testValgomat.leggTilPolitiker("Egil", [False, True, True, False])
+testValgomat = Valgomat(["Send dem hjem", "Nok er nok", "Kloden har fått feber", "Alle skal få", "Tre gratis enheter"])
+testValgomat.leggTilPolitiker("Nils", [True, True, False, False, False])
+testValgomat.leggTilPolitiker("Kåre", [False, True, False, False, True])
+testValgomat.leggTilPolitiker("Tore", [False, False, True, True, True])
+testValgomat.leggTilPolitiker("Egil", [False, True, True, False, True])
+testValgomat.leggTilPolitiker("Andreas", [False,False,False,False,True])
 testValgomat.kjør()
