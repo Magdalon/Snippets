@@ -6,12 +6,13 @@ Created on Fri Jan  3 12:48:38 2020
 """
 
 from random import random
-from random import sample
 from pprint import pprint
+
 from collections import defaultdict
+
 import matplotlib.pyplot as plt
 
-import matplotlib as mpl
+#import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 
 INSTILLINGER = {
@@ -38,8 +39,8 @@ class Verden(object):
         self.hPrey = [self.nPrey()]
         self.hPredator = [self.nPredator()]
         
-    def leggTilDyr(self,dyr):
-        self.populasjon.append(dyr)
+#    def leggTilDyr(self,dyr):
+#        self.populasjon.append(dyr)
 
     def settOpp(self, nPredator = 5, nPrey =5):
         [Predator(self,startmett=2*INSTILLINGER['startMettPredator']*random()) for i in range(nPredator)]
@@ -93,14 +94,14 @@ class Verden(object):
     def nPrey(self):
         return len([individ for individ in self.populasjon if type(individ) == Prey])
 
-    def plotPP(self):
-        plt.plot(jorden.hPredator,jorden.hPrey)
+    def plotPP(self,burn = 0):
+        plt.plot(jorden.hPredator[burn:],jorden.hPrey[burn:])
         plt.show()
 
-    def plotPP3D(self):
+    def plotPP3D(self,burn = 0):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        ax.plot(self.hPredator,self.hPrey,range(len(jorden.hPredator)))
+        ax.plot(self.hPredator[burn:],self.hPrey[burn:],range(len(jorden.hPredator[burn:])))
         plt.show()
         
 class Dyr(object):
