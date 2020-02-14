@@ -23,6 +23,8 @@ from random import random
 motsattVei = {"n":"s","s":"n","ø":"v","v":"ø","h":None}
 
 def tekst(liste):
+    liste = list(liste)
+    liste.sort()
     if len(liste) == 0:
         return ""
     elif len(liste) == 1:
@@ -34,7 +36,16 @@ def tekst(liste):
 class Element:
     farge = FARGE["rød"]
     muligeHandlinger = ["undersøk", "slå", "løft"]
-    def __init__(self, navn=None, beskrivelse = None, plassering = None, helse = 1, kommentarer = None, innhold = None):
+    def __init__(self, navn=None, sted = None, beskrivelse = None, funfacts = None, helse = 1, kommentarer = None, innhold = None, fokus = None):
+
+        
+        self.helse = helse
+        
+        self.sted = sted
+        self.startsted = sted
+        if sted:
+            sted.innhold.append(self)
+        
         if navn:
             self.navn = navn
         else:
@@ -52,16 +63,30 @@ class Element:
             self.innhold = innhold
         else:
             self.innhold = []
-        
-        self.helse = helse
+
+        if kommentarer:
+            self.kommentarer = kommentarer
+        else:
+            self.kommentarer = {}       
+
+        self.ødelagt = False
         self.ødelegger = None
+ 
+        if funfacts:
+            self.funfacts = funfacts
+        else:
+            self.funfacts = []
         
+        if fokus:
+            self.fokus = fokus
+        else:
+            self.fokus = None
 
     def handlinger(self):
         return "Mulige handlinger: " + FARGE["grønn"] + tekst(self.muligeHandlinger) +S
 
     def undersøk(self):
-        return self.beskrivelse + "\n" + self.handlinger()
+        return self.beskrivelse + ("\n"+sample(self.funfacts,1)[0] if self.funfacts else "")  + "\n" + self.handlinger() 
 
     def slå(self, person = None):
         self.helse -= 1
@@ -72,10 +97,12 @@ class Element:
     
     def ødelegg(self, person = None):
         svar = "Den går i stykker."
+        self.helse = 0
         self.ødelegger = person
         self.navn = "Ødelagt " + self.navn
         self.beskrivelse = self.beskrivelse + ("Den ble ødelagt av "+person.navn +"." if self.ødelegger else "ingen vet hvem som ødela den.")
         return svar
+    
     def løft(self):
         return self.pnavn() + " sitter fast eller er for tung til å løftes."
         
@@ -83,7 +110,16 @@ class Element:
         return self.pnavn() 
 
     def pnavn(self):
-        return self.farge + self.navn+ S
+        return self.farge + self.navn+ ("" if self.helse else " (ødelagt)") + S
+    
+    def gåInn(self,sted):
+        self.sted = sted
+        sted.innhold.append(self)
+        
+    def gåUt(self,sted):
+        self.sted = None
+        sted.innhold.remove(self)
+        
 
 class Søl(Element):
     muligeHandlinger = Element.muligeHandlinger + ["tørk"]
@@ -91,13 +127,6 @@ class Søl(Element):
         return "Du har ingen ting å tørke med"
     
 class Bokhylle(Element):
-    
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-    
-    
-    def handling(self,kommando,Person,rom):
-        self.kommandoer
 
     def undersøk(self):
         if self.innhold:
@@ -107,7 +136,7 @@ class Bokhylle(Element):
         
     
 class Kopimaskin(Element):
-    def __init__(self, papir=None,  toner=None, utskriftskø=None):
+    def __init__(self, navn = None, papir=None,  toner=None, utskriftskø=None,**kwargs):
         if papir:
             self.papir = papir
         else:
@@ -122,7 +151,8 @@ class Kopimaskin(Element):
             self.uskriftskø = utskriftskø
         else:
             self.utskriftskø = sample([True,False],1)[0]
-        self.navn = type(self).__name__.lower()
+
+        super().__init__(navn,**kwargs)
         
     def undersøk(self):
         return "Dette er en kopimaskin" +  (". Noen har satt i gang en stor utskrift." if self.utskriftskø else ".") + "\n" +self.handlinger()
@@ -131,92 +161,101 @@ class Kaffetrakter(Element):
     pass
 
 
+
+
+class Person(Element):
+    farge = FARGE["blå"]
+    
+    def __init__(self, navn = False, sted = None, **kwargs):
+        super().__init__(navn, **kwargs)
+        standardfacts = ["Nei, hva skal man egentlig si om " + (navn if navn else "denne ukjente personen ?"),
+                         "Det er ikke lov å undersøke kollegaer #metoo",
+                         ]
+        self.funfacts = self.funfacts + standardfacts
+        if sted:
+            self.gåInn(sted)
+    def flytt(self, nyttSted):
+        self.gåUt()
+        self.gåInn(nyttSted)
+        
+    def gåUt(self):
+        self.sted.personer.remove(self)
+        self.sted = None
+        
+        
+    def gåInn(self,rom):
+        rom.personer.append(self)
+        self.sted = rom
+        self.fokus = rom
+       
+    def ødelegg(self,person=None):
+        svar = "Du slo " + self.navn.upper() + " bevistløs!"
+        self.ødelegger = person
+        self.helse = 0
+        self.navn = self.navn
+        self.beskrivelse = self.beskrivelse + ("Hen ble slått bevistløs av "+person.navn +"." if self.ødelegger else "ingen vet hvem som drepte hen.")
+        return svar
+
+    def pnavn(self):
+        return self.farge + self.navn+ ("" if self.helse else " (bevistløs)" ) + S
+
+
 class Rom:
-    def __init__(self, navn = "", beskrivelse = "", gjenstander = None):
+    def __init__(self, navn = "", beskrivelse = "", innhold = None):
         self.navn = navn
         self.beskrivelse = beskrivelse
         self.naborom = {}
         self.personer = []
-        if gjenstander:
-            self.gjenstander = gjenstander
-            for gjenstand in gjenstander:
-                gjenstand.plassering = self
+        if innhold:
+            self.innhold = innhold
+            for gjenstand in innhold:
+                gjenstand.sted = self
         else:
-            self.gjenstander = []
-        
-    def __str__(self):
-        return self.navn + "\n" + self.beskrivelse + "\n" + ", ".join(map(str,self.personer)) + " er her."
+            self.innhold = []
     
-    def handling(self, kommando, Person):
+    def info(self):
+        svar = [self.beskrivelse]
+        if self.personer and len(self.personer)>1: 
+            svar.append(tekst(map(str,self.personer)) + " er her.")
+        if self.innhold:
+            svar.append(tekst(map(str,self.innhold)) + " er her.")
+        retninger = []
+        for retning, rom in spiller.sted.naborom.items():
+            retninger.append(FARGE["grønn" ] + retning + S+": " + rom.navn)
+        svar.append("   ".join(retninger))
+        return svar
+    
+    def __str__(self):
+        return self.navn
+     
+    def handling(self, kommando, person):
         if kommando[0] in self.naborom.keys():
-            return Person.flytt(self.naborom[kommando[0]])
+            person.flytt(self.naborom[kommando[0]])
+            return True
 
         elif len(kommando)>1:
-            for element in self.personer + self.gjenstander:
+            for element in self.personer + self.innhold:
                 if element.navn.lower() == kommando[1]:
+                    person.fokus = element
                     return getattr(element,kommando[0])()
-                    
+        else: 
+            return getattr(person.fokus,kommando[0])()
+      
         return False
                
     def leggTilNaborom(self, rom, himmelretning):
         self.naborom[himmelretning] = rom
         rom.naborom[motsattVei[himmelretning]] = self
-
-    def gåInn(self,person):
-        self.personer.append(person)
-        return self.navn + "\n" + self.beskrivelse
+   
+    def undersøk(self, person = None):
+        return "\n".join(self.info())
     
-    def gåUt(self, person):
-        self.personer.remove(person)
-        return ""
+    def slå(self,person = None):
+        return "Du slår i veggen. Ingen ting skjer"
+    
+    def løft(self,person = None):
+        return "Det går ikke an"
 
-class Person(Element):
-    farge = FARGE["blå"]
-    def __init__(self, navn = "", sted = None, beskrivelse = "", funfacts = None,sekk =None, helse = 1, kommentarer = None,**kwars):
-        self.navn = navn
-        if sekk:
-            self.sekk = sekk
-        else:
-            self.sekk = []
-        self.sted = sted
-        if sted:
-            self.sted.gåInn(self)
-        
-        self.beskrivelse = beskrivelse
-        
-        standardfacts = ["Nei, hva skal man egentlig si om " + self.navn + "?",
-                    "Det er ikke lov å undersøke kollegaer #metoo",
-                    ]
-        if funfacts:
-            self.funfacts = standardfacts + funfacts
-        else:
-            self.funfacts = standardfacts
-        self.helse = helse
-        if kommentarer:
-            self.kommentarer = kommentarer
-        else:
-            self.kommentarer = {}
-            
-        super().__init__(**kwargs)
-        
-    def flytt(self, nyttSted):
-        gammeltSted = self.sted
-        self.sted = nyttSted
-        return gammeltSted.gåUt(self) + nyttSted.gåInn(self)
-
-    def undersøk(self):
-        return self.beskrivelse + sample(self.funfacts,1)[0]   + "\n" + self.handlinger() 
-
-    def gåInn(self,rom):
-        self.sted =rom
-        return rom.gåInn(self)
-       
-    def ødelegg(self,person=None):
-        svar = "Han dør. DU DREPTE " + self.navn.upper() + "!"
-        self.ødelegger = person
-        self.navn = "Død " + self.navn
-        self.beskrivelse = self.beskrivelse + ("Hen ble drept av "+person.navn +"." if self.ødelegger else "ingen vet hvem som drepte hen.")
-        return svar
 
 class Utgang(Rom):
     def __init__(self, navn = "", beskrivelse = ""):
@@ -228,69 +267,69 @@ class Utgang(Rom):
 
 
 
-mattekontor = Rom("Mattekontor",
+mattekontor = Rom("mattekontoret",
                   "Dette er kontoret til mattelærerne.",
                   [Bokhylle(), Søl("kaffesøl")])
-g1 = Rom("Gang", 
+g1 = Rom("gangen", 
          "En helt vanlig gang, med kjedelige hvite vegger")
 g1.leggTilNaborom(mattekontor,"s")
-g2 = Rom("Gang", 
+g2 = Rom("gangen", 
          "En helt vanlig gang, med kjedelige hvite vegger", 
          [Kopimaskin()])
 g1.leggTilNaborom(g2,"ø")
-toalett = Rom("Toalett",
+toalett = Rom("toalettet",
               "Det er tre toaletter i denne kroken. Et for kvinner, et for menn, og et for de som ikke har bestemt seg.")
 g2.leggTilNaborom(toalett,"n")
-trappSør = Utgang("Trapp")
+trappSør = Utgang("trapp")
 trappSør.leggTilNaborom(g2,"n")
 
 simenKontor = Rom("Simen sitt kontor", 
                   "Den kompetente og modige Simen har innredet dette lagerrommet til sitt eget kontor")
 simenKontor.leggTilNaborom(g2,"v")
 
-samfunnsfagkontor = Rom("Samfunnsfagkontor",
+samfunnsfagkontor = Rom("samfunnsfagkontoret",
                         "Her sitter samfunnsfaglærerne")
 samfunnsfagkontor.leggTilNaborom(g1,"ø")
 
-g3 = Rom("Gang",
+g3 = Rom("gangen",
          "En helt vanlig gang, med kjedelige hvite vegger",[Bokhylle()])
 g3.leggTilNaborom(g1,"s")
 
-løveid = Rom("Møterom løveid",
+løveid = Rom("møterom Løveid",
              "Et helt vanlig møterom.")
 løveid.leggTilNaborom(g3,"v")
 
-g4 = Rom("Gang",
+g4 = Rom("gangen",
          "En helt vanlig gang, med kjedelige hvite vegger", 
          [Element("klesstativ")])
 g4.leggTilNaborom(g3,"s")
 
-personalrom=Rom("Personalrom", 
+personalrom=Rom("personalrommet", 
                 "Dette er personalrommet. Her sitter lærerne når de ikke har noe bedre å bedrive tiden til", 
                 [Kaffetrakter(),
                  Element("kjøleskap")])
 personalrom.leggTilNaborom(g4,"ø")
 
-norsklærerkontor = Rom("Norsklærerkontoret", 
+norsklærerkontor = Rom("norsklærerkontoret", 
                        "Her sitter norsklærerne")
 norsklærerkontor.leggTilNaborom(g4,"s")
 
-g5 = Rom("Gang",
+g5 = Rom("gangen",
          "En helt vanlig gang, med kjedelige hvite vegger")
 g5.leggTilNaborom(g4,"v")
 
-trappNord = Utgang("Trapp")
+trappNord = Utgang("trappen")
 trappNord.leggTilNaborom(g5,"n")
 
-heis = Rom("Heis")
+heis = Rom("heisen")
 heis.leggTilNaborom(g5,"v")
 
 
 def kontroller(kommando, sted, person):
     pass
 
-
-spiller = Person("Du",False)
+startsted = mattekontor
+spiller = Person("Du",startsted)
 ikkespillere = [
         Person("Martin",
                mattekontor,
@@ -322,48 +361,37 @@ ikkespillere = [
                mattekontor)
         ]
 
-startsted = mattekontor
-
 steg = 0
 
-print(
-'''
+print(FARGE["grønn"])
+print('''
 ---------------------------
        TEKSTKRIGER
 klarer du å komme deg hjem?
----------------------------
+---------------------------''')
+print(S)
+print('''Advarsel: Alle likheter med virkelige steder, personer og hendelser er tilfeldige
 
-'''
-
-      )
-
-
-
-print(spiller.gåInn(mattekontor))
+''')
 while(True):
     steg += 1
-    if len(spiller.sted.personer) >0:
-        print(tekst(list(map(str,spiller.sted.personer))) + " er her.")
-    if len(spiller.sted.gjenstander) >0:
-        print(tekst(list(map(str,spiller.sted.gjenstander))) + " er her.")
-    if len(spiller.sted.personer) >0 or len(spiller.sted.personer) >0:
-        print("Skriv \"undersøk <navn på person eller gjenstand>\" for å undersøke det som er i rommet")
-    for retning, rom in spiller.sted.naborom.items():
-        print(FARGE["grønn" ] + retning + S+": " + rom.navn ,end ="   ")
-    print()
-    kommando = input("Hva gjør du? (\"q \" for å avslutte) ")
+    print(FARGE["mangenta"] + "Du er på "+ str(spiller.sted)+S)
+    if not type(spiller.fokus) == Rom:
+        print("Du ser på " + spiller.fokus.pnavn())
+    print(spiller.fokus.undersøk())
+    kommando = input("Hva gjør du? (\"q\" for å avslutte, \"h\" for hjelp)\n")
     print()
     if kommando == "q":
         break
+    elif kommando == "h":
+        print("Skriv \"undersøk <navn på person eller gjenstand>\" for å undersøke det som er i rommet.")
+        continue
     else:
        retur = spiller.sted.handling(kommando.lower().split(), spiller)
-       if retur:
-          if type(retur) != bool:
-              print(retur)
-       else:
-           print("Det kan du ikke gjøre")
-
-    print()
+        
+    if not retur:
+       print("Det kan du ikke gjøre")
+       print()
     
     if type(spiller.sted) == Utgang:
         print("Du fant utgangen etter " + str(steg)+ " steg. Gratulerer")
